@@ -1,0 +1,20 @@
+const {webkit}=require('/Users/musinerkebulan/UniversityVMLab/.cache/browser-tests/node_modules/playwright');const assert=require('node:assert/strict');const {actions}=require('./engine.cjs');
+(async()=>{const browser=await webkit.launch();try{
+ const p=await browser.newPage({viewport:{width:1440,height:1100}}),errors=[];p.on('pageerror',e=>errors.push(e.message));await p.goto('http://127.0.0.1:8765/vm-guide-pages/online/');
+ await p.locator('#builderNick').fill('Онлайн тест');await p.locator('#loginBuilder button').click();await p.locator('#studio').waitFor({state:'visible'});
+ for(const a of actions)await p.evaluate(async action=>{await act(action);},a);
+ assert.equal(await p.evaluate(()=>state.score),100);await p.reload();await p.locator('#studio').waitFor({state:'visible'});assert.equal(await p.evaluate(()=>state.score),100);
+ const download=await Promise.all([p.waitForEvent('download'),p.locator('#downloadReport').click()]);assert.match(download[0].suggestedFilename(),/^vm-result/);
+ const report=await p.evaluate(()=>JSON.parse(localStorage.getItem('vm-guide.online.v1')));assert.equal(report.mode,'solo');assert.equal(report.actions.length,28);assert.equal(report.state.score,100);
+ await p.setViewportSize({width:390,height:844});assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ const teacher=await browser.newPage();await teacher.goto('http://127.0.0.1:8765/vm-guide-pages/online/teacher.html');assert(await teacher.locator('#signIn').isDisabled());assert.match(await teacher.locator('#connection').textContent(),/не подключён/);
+ assert.deepEqual(errors,[]);console.log('PASS static online constructor: no room/account needed, six missions, local persistence, downloaded report, mobile layout; teacher clearly shows disconnected backend.');
+ // A second browser context tests class mode without touching the real Supabase project.
+ const context=await browser.newContext();let serverState={hardware:{cpu:4,ram:8,disk:32},assembled:false,on:false,hypervisor:false,vms:[],completed:[],flags:{},stress:false,lastHttp:null,events:['Старт'],score:0},revision=0;
+ await context.route('**/config.js',r=>r.fulfill({contentType:'text/javascript',body:"window.VMCloud={endpoint:'https://classroom.test/api',publishableKey:'public-test-key'};"}));
+ await context.route('https://classroom.test/api',async r=>{const b=r.request().postDataJSON();let result;if(b.op==='join')result={token:'a'.repeat(64),id:'test-student',state:serverState,revision};else if(b.op==='action'){assert.equal(b.revision,revision);const engine=require('../online/engine.js');serverState=engine.reduce(serverState,b.action);revision++;result={state:serverState,revision};}else if(b.op==='rooms')result={rooms:[{id:'room',code:'ABCDEFGH',created_at:new Date().toISOString()}]};else if(b.op==='roster')result={code:'ABCDEFGH',students:[{nickname:'Группа тест',state:serverState,last_seen:new Date().toISOString()}]};else result={state:serverState,revision};await r.fulfill({contentType:'application/json',body:JSON.stringify(result)});});
+ const c=await context.newPage(),t=await context.newPage();await c.goto('http://127.0.0.1:8765/vm-guide-pages/online/?code=ABCDEFGH');await c.locator('#builderNick').fill('Группа тест');await c.locator('#loginBuilder button').click();await c.locator('#studio').waitFor({state:'visible'});
+ await t.goto('http://127.0.0.1:8765/vm-guide-pages/online/teacher.html');await t.locator('#teacherSecret').fill('private-teacher-test-secret');await t.locator('#signIn').click();await t.locator('#panel').waitFor({state:'visible'});
+ await c.evaluate(async()=>await act({type:'hardware',hardware:{cpu:4,ram:16,disk:32}}));await t.waitForFunction(()=>document.querySelector('#students').textContent.includes('10 / 100'));
+ assert.equal(await c.evaluate(()=>JSON.parse(localStorage.getItem('vm-guide.online.v1')).mode),'class');await context.close();console.log('PASS class-mode API contract: code join, authenticated action/revision, teacher sees progress after 3-second refresh (mock service, not real Supabase deployment).');
+}finally{await browser.close();}})().catch(e=>{console.error(e);process.exit(1)});
