@@ -1,8 +1,8 @@
 VM GUIDE — GitHub Pages
 
 Гайд и GIF: https://zholdaskali.github.io/vm-guide/
-Конструктор: https://zholdaskali.github.io/vm-guide/online/
-Пульт: https://zholdaskali.github.io/vm-guide/online/teacher.html
+Конструктор: https://zholdaskali.github.io/vm-quest/
+Пульт: https://zholdaskali.github.io/vm-quest/teacher.html
 
 Самостоятельный режим работает без Mac, регистрации аккаунта и кода группы.
 Сборка хранится в localStorage браузера; кнопка «Скачать результат» выгружает JSON.
