@@ -1,2 +1,2 @@
-// Только публичные настройки. Секрет преподавателя сюда не добавлять.
-window.VMCloud={endpoint:'',publishableKey:''};
+// Публичный адрес функции. Секрет преподавателя хранится отдельно.
+window.VMCloud={"endpoint": "https://mngotixjegnqjsjbjeal.supabase.co/functions/v1/vm-classroom", "publishableKey": ""};
